@@ -50,22 +50,32 @@ export async function configurarJogadores(rl) {
 export async function jogarTurno(jogador, rl) {
     let dados = rollDices();
     jogador.decrementarLancamento();
+    const categorias = Object.keys(jogador.cartela);
 
     console.log(`\n--- Vez do jogador ${jogador.nome.toUpperCase()} ---`);
-    console.log(`Lancamentos restantes: ${jogador.lancamentosRestantes}`);
+    console.log(`Lançamentos restantes: ${jogador.lancamentosRestantes}`);
     console.log(`Dados na mesa:\n [ ${dados.join(', ')} ]\n`);
-    exibirSugestoes(dados, jogador)
+    exibirSugestoes(dados, jogador);
 
     while (jogador.podeJogar()) {
-
         let querRolar = "";
         let opcaoValida = false;
         
         do {
-            querRolar = await rl.question('Deseja rolar os dados novamente?\n Sim : (1)\n Não : (2) ');
-            opcaoValida = validarOpcao(querRolar);
+            querRolar = await rl.question('Deseja rolar os dados novamente? (1) Sim | (2) Não | ou digite o Nº para pontuar direto: ');
+            querRolar = querRolar.trim();
+            const numEscolhido = parseInt(querRolar);
 
-            if (!opcaoValida) {
+            if (querRolar === '1' || querRolar === '2') {
+                opcaoValida = true;
+            } else if (!isNaN(numEscolhido) && numEscolhido >= 1 && numEscolhido <= 12) {
+                const catEscolhida = categorias[numEscolhido - 1];
+                if (jogador.cartela[catEscolhida] === null) {
+                    opcaoValida = true;
+                } else {
+                    console.log(`A categoria "${catEscolhida}" já foi preenchida! Escolha outra opção.\n`);
+                }
+            } else {
                 console.log('Opção Inválida! Tente novamente.\n');
             }
         } while (!opcaoValida);
@@ -73,8 +83,19 @@ export async function jogarTurno(jogador, rl) {
         if (querRolar === '2') {
             break;
         }
+
+        const numEscolhido = parseInt(querRolar);
+        if (!isNaN(numEscolhido) && numEscolhido >= 1 && numEscolhido <= 12 && querRolar !== '1') {
+            const catEscolhida = categorias[numEscolhido - 1];
+            jogador.preencherCartela(catEscolhida, dados);
+            const pontosGanhos = jogador.cartela[catEscolhida];
+            console.log(`\n✅ Você marcou ${pontosGanhos} pontos em "${catEscolhida}".`);
+            console.log(`Pontuação total de ${jogador.nome.toUpperCase()}: ${jogador.pontuacaoTotal} pontos!`);
+            jogador.resetarTentativas();
+            return;
+        }
         
-        const respostaManter = await rl.question('\nDigite os dados que deseja MANTER separados pro espaço (ou ENTER para rolar todos): ');
+        const respostaManter = await rl.question('\nDigite os dados que deseja MANTER separados por espaço (ou ENTER para rolar todos): ');
 
         const dadosManter = respostaManter.trim() !== ""
             ? respostaManter.trim().split(/\s+/).map(Number)
@@ -91,7 +112,6 @@ export async function jogarTurno(jogador, rl) {
 
     console.log(`\n Dados finais do seu turno: [ ${dados.join(', ')} ]`);
     
-    const categorias = Object.keys(jogador.cartela);
     console.log(`\n--- CARTELA DE ${jogador.nome.toUpperCase()} ---`);
 
     categorias.forEach((cat, index) => {
