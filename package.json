@@ -1,13 +1,16 @@
 {
   "name": "study-general-minigame",
   "version": "1.0.0",
-  "description": "",
-  "main": "main.js",
+  "description": "A CLI-based General (Yahtzee) dice game built with Node.js and OOP",
+  "main": "src/index.js",
   "type": "module",
   "scripts": {
     "start": "node src/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test src/tests/*.test.js"
   },
   "author": "Felipe Molz",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^6.0.1"
+  }
 }

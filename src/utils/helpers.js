@@ -1,75 +1,112 @@
-import { CategoriasCartela } from '../models/CategoriasCartela.js';
+import { ScorecardCategories } from "../models/ScorecardCategories.js";
+import { CATEGORY_KEYS, CATEGORY_LABELS } from "../models/Player.js";
 
-export function rollDices() {
-    let dices = [];
+// ── Dice Rolling ────────────────────────────────────────────────────
 
-    for (let i = 0; i < 5; i++) {
-        const random = Math.floor(Math.random() * 6 + 1);
-        dices.push(random);
-    }
+const DICE_COUNT = 5;
+const DICE_MIN = 1;
+const DICE_MAX = 6;
 
-    return dices;
+/** Generates a single random die value (1-6). */
+function rollSingleDie() {
+  return Math.floor(Math.random() * DICE_MAX) + DICE_MIN;
 }
 
-export const randomPlayer = (jogadores) => {
-    const random = Math.floor(Math.random() * jogadores.length);
-    return jogadores[random];
+/** Rolls all 5 dice and returns the results as an array. */
+export function rollAllDice() {
+  return Array.from({ length: DICE_COUNT }, () => rollSingleDie());
 }
 
-export function rerollDices(dadosAtuais, dadosManter) {
-    const contagemManter = {};
-    for (const num of dadosManter) {
-        contagemManter[num] = (contagemManter[num] || 0) + 1;
-    }
-    
-    const mantidos = dadosAtuais.filter(num => {
-        if (contagemManter[num] > 0) {
-            contagemManter[num]--;
-            return true;
-        }
-    });
-
-    const quantidadeParaRolar = dadosAtuais.length - mantidos.length;
-
-    const novosDados = rodarApenas(quantidadeParaRolar);
-
-    return {
-        mantidos,
-        novosDados,
-        mesaFinal: [...mantidos, ...novosDados]
-    };
+/** Picks a random player from the given array. */
+export function pickRandomPlayer(players) {
+  const index = Math.floor(Math.random() * players.length);
+  return players[index];
 }
 
-const rodarApenas = (quantidade) => {
-    let newDices = [];
+/**
+ * Re-rolls some dice while keeping others.
+ *
+ * @param {number[]} currentDice  – The current 5 dice on the table.
+ * @param {number[]} diceToKeep   – The values the player wants to keep.
+ * @returns {{ kept: number[], rerolled: number[], finalDice: number[] }}
+ */
+export function rerollDice(currentDice, diceToKeep) {
+  // Build a count map of dice the player wants to keep
+  const keepCounts = {};
+  for (const value of diceToKeep) {
+    keepCounts[value] = (keepCounts[value] || 0) + 1;
+  }
 
-    for (let i = 0; i < quantidade; i++) {
-        const random = Math.floor(Math.random() * 6 + 1);
-        newDices.push(random);
+  // Separate kept dice from dice to re-roll
+  const kept = currentDice.filter((value) => {
+    if (keepCounts[value] > 0) {
+      keepCounts[value]--;
+      return true;
     }
+    return false;
+  });
 
-    return newDices;
+  const rerollCount = currentDice.length - kept.length;
+  const rerolled = Array.from({ length: rerollCount }, () => rollSingleDie());
+
+  return {
+    kept,
+    rerolled,
+    finalDice: [...kept, ...rerolled],
+  };
 }
 
-export function verificarCombinacoesEspeciais(dados, cartela) {
-    let regras = new CategoriasCartela();
-    const todasCategorias = Object.keys(cartela);
-    
-    const especiais = ['trinca', 'quadraEspecial', 'fullHand', 'seqMenor', 'seqMaior', 'general'];
+// ── Combination Detection ───────────────────────────────────────────
 
-    const encontradas = [];
+/** Special (lower-section) category keys to scan for automatic detection. */
+const SPECIAL_CATEGORIES = [
+  "threeOfAKind",
+  "fourOfAKind",
+  "fullHouse",
+  "smallStraight",
+  "largeStraight",
+  "general",
+];
 
-    for (const categoria of especiais) {
-        const capitalize = categoria.charAt(0).toUpperCase();
-        const restoDaPalavra = categoria.slice(1);
-        const nomeDoMetodo = 'calcular' + capitalize + restoDaPalavra;
+/**
+ * Maps special category keys to their corresponding
+ * ScorecardCategories method names.
+ */
+const SPECIAL_METHOD_MAP = {
+  threeOfAKind: "calculateThreeOfAKind",
+  fourOfAKind: "calculateFourOfAKind",
+  fullHouse: "calculateFullHouse",
+  smallStraight: "calculateSmallStraight",
+  largeStraight: "calculateLargeStraight",
+  general: "calculateGeneral",
+};
 
-        const pontos = regras[nomeDoMetodo](dados);
-        const numeroNoMenu = todasCategorias.indexOf(categoria) + 1
+/**
+ * Scans the dice for special combinations that are still available
+ * on the player's scorecard.
+ *
+ * @param {number[]} dice      – Current dice values.
+ * @param {object}   scorecard – The player's scorecard object.
+ * @returns {{ categoryKey: string, label: string, score: number, menuNumber: number }[]}
+ */
+export function detectSpecialCombinations(dice, scorecard) {
+  const rules = new ScorecardCategories();
+  const detected = [];
 
-        if (pontos > 0 && cartela[categoria] === null) {
-            encontradas.push({ categoria, pontos, numeroNoMenu })
-        }
+  for (const categoryKey of SPECIAL_CATEGORIES) {
+    const methodName = SPECIAL_METHOD_MAP[categoryKey];
+    const score = rules[methodName](dice);
+    const menuNumber = CATEGORY_KEYS.indexOf(categoryKey) + 1;
+
+    if (score > 0 && scorecard[categoryKey] === null) {
+      detected.push({
+        categoryKey,
+        label: CATEGORY_LABELS[categoryKey],
+        score,
+        menuNumber,
+      });
     }
-    return encontradas;
+  }
+
+  return detected;
 }

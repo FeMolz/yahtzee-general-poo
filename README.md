@@ -1,70 +1,129 @@
-# 🎲 Jogo General (Yahtzee) em JavaScript
+# 🎲 General (Yahtzee) — CLI Dice Game
 
-Um jogo de dados clássico do estilo **General** (também conhecido internacionalmente como *Yahtzee*), executado diretamente no terminal e desenvolvido com **JavaScript moderno (Node.js ES Modules)** e **Programação Orientada a Objetos (POO)**.
-
----
-
-## 🎯 Motivação do Projeto
-
-Este projeto nasceu como um **desafio pessoal de estudos** com o objetivo de colocar em prática, exercitar e consolidar conceitos fundamentais da programação:
-
-- **Programação Orientada a Objetos (POO):** Criação e comunicação entre classes (`Jogador`, `JogoGeneral`, `CategoriasCartela`), encapsulamento de estado interno e separação de responsabilidades.
-- **JavaScript Moderno:** Modularização com ES Modules (`import`/`export`), assincronismo com `async`/`await` e manipulação de fluxos com `node:readline/promises`.
-- **Lógica e Estrutura de Dados:** Algoritmos para rolagem e rerrolagem de dados mantendo escolhas do jogador, validação de jogadas e detecção automática de combinações na mesa.
+A classic **General** dice game (also known as *Yahtzee*), played entirely in the terminal. Built with **Node.js ES Modules** and **Object-Oriented Programming (OOP)**.
 
 ---
 
-## 🕹️ Como Jogar
+## 🎯 About the Project
 
-1. O jogo suporta de **2 a 4 jogadores**.
-2. Cada partida dura **12 rodadas** (uma para cada categoria da cartela de pontuação).
-3. A cada rodada, cada jogador tem direito a até **3 lançamentos de dados**:
-   - **1º Lançamento:** Todos os 5 dados são rolados.
-   - **2º e 3º Lançamentos (opcionais):** O jogador pode escolher quais dados deseja manter e rerrolar apenas os restantes.
-   - **Bônus de Mão:** Se o jogador decidir pontuar logo no primeiro lançamento sem rerrolar nenhum dado, os pontos daquela categoria são **dobrados**!
-4. **Assistente de Combinações:** O sistema detecta automaticamente se os dados formam combinações especiais (Trinca, Quadra, Full Hand, Sequências ou General) que ainda estejam disponíveis na cartela, permitindo pontuar direto.
-5. Ao término das 12 rodadas, o jogador com a maior pontuação total acumulada é consagrado o **vencedor**.
+This project was created as a **personal study challenge** to practice and consolidate core programming concepts:
+
+- **Object-Oriented Programming (OOP):** Class design and communication (`Player`, `GeneralGame`, `ScorecardCategories`), state encapsulation, and separation of concerns.
+- **Modern JavaScript:** ES Modules (`import`/`export`), `async`/`await`, and interactive CLI input with `node:readline/promises`.
+- **Logic & Data Structures:** Dice rolling/rerolling algorithms, scoring validation, and automatic combination detection.
+- **Testing:** Unit tests using the Node.js built-in test runner (`node:test`).
 
 ---
 
-## 🚀 Como Executar o Jogo
+## 🕹️ How to Play
 
-### Pré-requisitos
-- [Node.js](https://nodejs.org/) instalado na máquina (versão 18 ou superior).
+1. The game supports **2 to 4 players**.
+2. Each match lasts **12 rounds** (one for each scoring category).
+3. Each round, every player gets up to **3 dice rolls**:
+   - **1st Roll:** All 5 dice are rolled.
+   - **2nd & 3rd Rolls (optional):** Choose which dice to keep and re-roll the rest.
+   - **First-Roll Bonus:** If you score right after the 1st roll without re-rolling, the points for that category are **doubled**!
+4. **Combination Assistant:** The game automatically detects if your dice form special combinations (Three of a Kind, Four of a Kind, Full House, Straights, or General) that are still available on your scorecard.
+5. After 12 rounds, the player with the **highest total score** wins!
 
-### Passo a Passo
+### Scoring Categories
 
-1. Abra o terminal na pasta do projeto:
+| #  | Category         | Score                                |
+|----|------------------|--------------------------------------|
+| 1  | Aces (1s)        | Sum of all 1s                        |
+| 2  | Twos (2s)        | Sum of all 2s                        |
+| 3  | Threes (3s)      | Sum of all 3s                        |
+| 4  | Fours (4s)       | Sum of all 4s                        |
+| 5  | Fives (5s)       | Sum of all 5s                        |
+| 6  | Sixes (6s)       | Sum of all 6s                        |
+| 7  | Three of a Kind  | Sum of all dice (if 3+ match)        |
+| 8  | Four of a Kind   | Sum of all dice (if 4+ match)        |
+| 9  | Full House       | 25 points (3 of one + 2 of another)  |
+| 10 | Small Straight   | 30 points (4 consecutive dice)       |
+| 11 | Large Straight   | 40 points (5 consecutive dice)       |
+| 12 | General (Yahtzee)| 50 points (all 5 dice the same)      |
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) **v18 or higher** installed on your machine.
+
+### Installation
+
 ```bash
+# Clone the repository
+git clone <repository-url>
 cd study-general-minigame
+
+# Install dependencies
+npm install
 ```
 
-2. Execute o jogo com o comando:
+### Running the Game
+
 ```bash
 npm start
 ```
-*(ou alternativamente via `node src/index.js`)*
 
-3. Siga as instruções na tela digitando os nomes dos jogadores e fazendo as suas jogadas pelo teclado!
+Or directly:
+
+```bash
+node src/index.js
+```
+
+Then follow the on-screen prompts: enter player names, roll dice, choose which to keep, and pick a scoring category each turn!
+
+### Running Tests
+
+The project includes unit tests for all core modules using Node.js built-in test runner:
+
+```bash
+npm test
+```
+
+This runs all test files in `src/tests/` covering:
+- **ScorecardCategories** – All 12 scoring rules
+- **Player** – Scorecard management, rolls, bonuses
+- **GeneralGame** – Turn/round logic, winner determination
+- **Helpers** – Dice rolling, re-rolling, combination detection
+- **Validators** – Input validation for names, menus, dice selections
 
 ---
 
-## 📁 Estrutura do Código
+## 📁 Project Structure
 
 ```text
 src/
 ├── cli/
-│   └── terminal.js          # Interface do usuário (CLI), entrada de dados e menus interativos
+│   └── terminal.js              # CLI interface: player setup, turn flow, display
 ├── models/
-│   ├── CategoriasCartela.js  # Regras e algoritmos de pontuação das 12 categorias
-│   ├── Jogador.js            # Modelo de cada jogador (cartela, tentativas, bônus de mão)
-│   └── JogoGeneral.js        # Gerenciamento de turnos, rodadas e determinação do vencedor
+│   ├── ScorecardCategories.js   # Scoring rules for all 12 categories
+│   ├── Player.js                # Player model (scorecard, rolls, bonus logic)
+│   └── GeneralGame.js           # Game state (rounds, turns, winner)
+├── tests/
+│   ├── scorecardCategories.test.js
+│   ├── player.test.js
+│   ├── generalGame.test.js
+│   ├── helpers.test.js
+│   └── validators.test.js
 ├── utils/
-│   ├── helpers.js            # Sorteios aleatórios, rerrolagens e scanner de combinações
-│   └── validators.js         # Validações de regex (nomes e opções de menu)
-└── index.js                  # Ponto de entrada e Loop Principal da Partida (Game Loop)
+│   ├── helpers.js               # Dice rolling, re-rolling, combination detection
+│   └── validators.js            # Input validation functions
+└── index.js                     # Entry point — main game loop
 ```
 
 ---
 
-Desenvolvido por **Felipe Molz** para fins de estudo e aprimoramento em JavaScript e POO.
+## 🛠️ Tech Stack
+
+- **Runtime:** Node.js (v18+)
+- **Language:** JavaScript (ES Modules)
+- **CLI Colors:** [chalk](https://www.npmjs.com/package/chalk) v6
+- **Testing:** Node.js built-in test runner (`node:test`)
+
+---
+
+Developed by **Felipe Molz** for study and improvement in JavaScript and OOP.

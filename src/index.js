@@ -1,56 +1,68 @@
-import { configurarJogadores, jogarTurno } from './cli/terminal.js';
-import { CategoriasCartela } from './models/CategoriasCartela.js';
-import { Jogador } from './models/Jogador.js';
-import { JogoGeneral } from './models/JogoGeneral.js';
-import { randomPlayer } from './utils/helpers.js';
-import * as readline from 'node:readline/promises';
+import chalk from "chalk";
+import * as readline from "node:readline/promises";
+import { setupPlayers, playTurn } from "./cli/terminal.js";
+import { Player } from "./models/Player.js";
+import { GeneralGame } from "./models/GeneralGame.js";
+import { pickRandomPlayer } from "./utils/helpers.js";
 
+/**
+ * Main entry point – Runs the full General (Yahtzee) game loop in the CLI.
+ */
+async function startGame() {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
 
-async function iniciarJogo() {
-    const rl = readline.createInterface({ 
-        input: process.stdin, 
-        output: process.stdout 
-    });
+  console.log(chalk.bold.cyan("\n  ╔═══════════════════════════════════════╗"));
+  console.log(chalk.bold.cyan("  ║   🎲  WELCOME TO GENERAL (YAHTZEE)   ║"));
+  console.log(chalk.bold.cyan("  ╚═══════════════════════════════════════╝\n"));
 
-    console.log("--- BEM-VINDO AO JOGO GENERAL ---\n");
-    
-    const nomesDosJogadores = await configurarJogadores(rl);
-    
-    console.log("\nJogo iniciado com os seguintes jogadores:");
-    console.log(nomesDosJogadores);
+  // 1. Setup players
+  const playerNames = await setupPlayers(rl);
 
-    const jogadores = nomesDosJogadores.map(nome => new Jogador(nome));
-    const jogo = new JogoGeneral(jogadores);
+  const players = playerNames.map((name) => new Player(name));
+  const game = new GeneralGame(players);
 
-    const jogadorInicial = randomPlayer(jogadores);
-    jogo.iniciadorDePartida = jogadorInicial;
-    jogadorInicial.jogando = true;
-    console.log(`Primeiro a jogar é: ${jogadorInicial.nome}`);
+  console.log(chalk.green("\n  Game started with:"));
+  players.forEach((p, i) => console.log(chalk.white(`    ${i + 1}. ${p.name}`)));
 
-    while (jogo.rodadaAtual <= jogo.maximoRodadas) {
-        console.log(`\n========================================`);
-        console.log(`   RODADA ${jogo.rodadaAtual} DE ${jogo.maximoRodadas}`);
-        console.log(`========================================`);
+  // 2. Pick a random starting player
+  const startingPlayer = pickRandomPlayer(players);
+  game.roundStarterPlayer = startingPlayer;
+  startingPlayer.isActive = true;
+  console.log(chalk.yellow(`\n  🎯 ${startingPlayer.name} goes first!\n`));
 
-        const jogadorAtivo = jogo.obterJogadorAtivo();
-        await jogarTurno(jogadorAtivo, rl);
-        jogo.passarTurno();
-    }
-    
-    const vencedor = jogo.obterVencedor();
-    console.log("\n=========================================");
-    console.log("          🏆 FIM DE JOGO! 🏆            ");
-    console.log("=========================================");
-    console.log(`Parabéns, ${vencedor.nome.toUpperCase()}! Você venceu com ${vencedor.pontuacaoTotal} pontos!\n`);
+  // 3. Game loop
+  while (!game.isGameOver()) {
+    console.log(chalk.bold.cyan(`\n  ╔═══════════════════════════════════════╗`));
+    console.log(chalk.bold.cyan(`  ║   ROUND ${game.currentRound.toString().padStart(2)} OF ${game.maxRounds}                    ║`));
+    console.log(chalk.bold.cyan(`  ╚═══════════════════════════════════════╝`));
 
-    console.log("--- CLASSIFICAÇÃO GERAL ---");
-    const ranking = [...jogo.jogadores].sort((a, b) => b.pontuacaoTotal - a.pontuacaoTotal);
-    ranking.forEach((jogador, index) => {
-        console.log(`${index + 1}º Lugar: ${jogador.nome.toUpperCase()} - ${jogador.pontuacaoTotal} pontos`);
-    });
-    console.log("=========================================\n");
+    const activePlayer = game.getActivePlayer();
+    await playTurn(activePlayer, rl);
+    game.advanceTurn();
+  }
 
-    rl.close();
+  // 4. Game over – show results
+  const winner = game.getWinner();
+  const ranking = game.getRanking();
+
+  console.log(chalk.bold.yellow("\n  ╔═══════════════════════════════════════╗"));
+  console.log(chalk.bold.yellow("  ║         🏆  GAME OVER!  🏆           ║"));
+  console.log(chalk.bold.yellow("  ╚═══════════════════════════════════════╝"));
+
+  console.log(chalk.bold.green(`\n  Congratulations, ${winner.name}!`));
+  console.log(chalk.bold.green(`  You won with ${winner.totalScore} points!\n`));
+
+  console.log(chalk.cyan("  ── Final Ranking ──"));
+  ranking.forEach((player, index) => {
+    const medal = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "  ";
+    console.log(chalk.white(`  ${medal} ${index + 1}. ${player.name.padEnd(15)} ${player.totalScore} pts`));
+  });
+  console.log("");
+
+  rl.close();
 }
 
-iniciarJogo();
+startGame();
