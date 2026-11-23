@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { Player, CATEGORY_KEYS } from "../models/Player.js";
+import { Player, CATEGORY_KEYS } from "../domain/Player.js";
 
 describe("Player", () => {
   describe("constructor", () => {

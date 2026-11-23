@@ -1,14 +1,10 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import {
-  rollAllDice,
-  pickRandomPlayer,
-  rerollDice,
-  detectSpecialCombinations,
-} from "../utils/helpers.js";
-import { Player } from "../models/Player.js";
+import { createRoller, pickRandomPlayer, rollAllDice } from "../domain/dice.js";
+import { detectSpecialCombinations } from "../domain/combinations.js";
+import { Player } from "../domain/Player.js";
 
-describe("helpers", () => {
+describe("dice", () => {
   describe("rollAllDice", () => {
     it("returns an array of 5 dice", () => {
       const dice = rollAllDice();
@@ -23,6 +19,11 @@ describe("helpers", () => {
         }
       }
     });
+
+    it("uses the injected RNG", () => {
+      const dice = rollAllDice(() => 0);
+      assert.deepEqual(dice, [1, 1, 1, 1, 1]);
+    });
   });
 
   describe("pickRandomPlayer", () => {
@@ -33,42 +34,30 @@ describe("helpers", () => {
         assert.ok(players.includes(picked));
       }
     });
+
+    it("honors a fixed RNG", () => {
+      const players = [new Player("A"), new Player("B"), new Player("C")];
+      assert.equal(pickRandomPlayer(players, () => 0), players[0]);
+      assert.equal(pickRandomPlayer(players, () => 0.5), players[1]);
+    });
   });
 
-  describe("rerollDice", () => {
-    it("keeps specified dice and re-rolls the rest", () => {
-      const current = [1, 2, 3, 4, 5];
-      const toKeep = [1, 3, 5];
-      const result = rerollDice(current, toKeep);
-
-      assert.equal(result.kept.length, 3);
-      assert.deepEqual(result.kept.sort(), [1, 3, 5]);
-      assert.equal(result.rerolled.length, 2);
-      assert.equal(result.finalDice.length, 5);
+  describe("rerollUnlocked", () => {
+    it("replaces only unlocked dice", () => {
+      const roller = createRoller(() => 0);
+      const next = roller.rerollUnlocked([2, 3, 4, 5, 6], [true, false, true, false, false]);
+      assert.deepEqual(next, [2, 1, 4, 1, 1]);
     });
 
-    it("re-rolls all dice when keeping none", () => {
-      const current = [1, 2, 3, 4, 5];
-      const result = rerollDice(current, []);
-      assert.equal(result.kept.length, 0);
-      assert.equal(result.rerolled.length, 5);
-      assert.equal(result.finalDice.length, 5);
-    });
-
-    it("keeps all dice when keeping all", () => {
-      const current = [3, 3, 3, 3, 3];
-      const result = rerollDice(current, [3, 3, 3, 3, 3]);
-      assert.equal(result.kept.length, 5);
-      assert.equal(result.rerolled.length, 0);
-      assert.deepEqual(result.finalDice, [3, 3, 3, 3, 3]);
-    });
-
-    it("handles duplicate values correctly", () => {
-      const current = [2, 2, 5, 5, 6];
-      const toKeep = [2, 5];
-      const result = rerollDice(current, toKeep);
-      assert.equal(result.kept.length, 2);
-      assert.equal(result.rerolled.length, 3);
+    it("keeps every die when all are locked", () => {
+      let calls = 0;
+      const roller = createRoller(() => {
+        calls += 1;
+        return 0;
+      });
+      const next = roller.rerollUnlocked([3, 3, 3, 3, 3], [true, true, true, true, true]);
+      assert.deepEqual(next, [3, 3, 3, 3, 3]);
+      assert.equal(calls, 0);
     });
   });
 
@@ -77,7 +66,7 @@ describe("helpers", () => {
       const player = new Player("Test");
       const dice = [3, 3, 3, 2, 2];
       const combos = detectSpecialCombinations(dice, player.scorecard);
-      const labels = combos.map((c) => c.categoryKey);
+      const labels = combos.map((combo) => combo.categoryKey);
       assert.ok(labels.includes("threeOfAKind"));
       assert.ok(labels.includes("fullHouse"));
     });
@@ -86,7 +75,7 @@ describe("helpers", () => {
       const player = new Player("Test");
       const dice = [4, 4, 4, 4, 4];
       const combos = detectSpecialCombinations(dice, player.scorecard);
-      const labels = combos.map((c) => c.categoryKey);
+      const labels = combos.map((combo) => combo.categoryKey);
       assert.ok(labels.includes("general"));
       assert.ok(labels.includes("fourOfAKind"));
       assert.ok(labels.includes("threeOfAKind"));
@@ -94,20 +83,19 @@ describe("helpers", () => {
 
     it("skips categories already filled", () => {
       const player = new Player("Test");
-      player.scorecard.threeOfAKind = 15; // already filled
+      player.scorecard.threeOfAKind = 15;
       const dice = [3, 3, 3, 2, 2];
       const combos = detectSpecialCombinations(dice, player.scorecard);
-      const labels = combos.map((c) => c.categoryKey);
+      const labels = combos.map((combo) => combo.categoryKey);
       assert.ok(!labels.includes("threeOfAKind"));
       assert.ok(labels.includes("fullHouse"));
     });
 
-    it("returns empty array when no specials match", () => {
+    it("detects a small straight", () => {
       const player = new Player("Test");
-      const dice = [1, 2, 3, 4, 6]; // small straight but we check only specials with score > 0
+      const dice = [1, 2, 3, 4, 6];
       const combos = detectSpecialCombinations(dice, player.scorecard);
-      // smallStraight should be detected
-      const labels = combos.map((c) => c.categoryKey);
+      const labels = combos.map((combo) => combo.categoryKey);
       assert.ok(labels.includes("smallStraight"));
     });
   });

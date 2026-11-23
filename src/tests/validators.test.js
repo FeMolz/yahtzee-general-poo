@@ -5,7 +5,7 @@ import {
   isValidMenuOption,
   isValidDiceSelection,
   isValidCategoryNumber,
-} from "../utils/validators.js";
+} from "../shared/validators.js";
 
 describe("validators", () => {
   describe("isValidName", () => {

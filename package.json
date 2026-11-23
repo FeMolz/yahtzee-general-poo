@@ -1,11 +1,13 @@
 {
   "name": "study-general-minigame",
   "version": "1.0.0",
-  "description": "A CLI-based General (Yahtzee) dice game built with Node.js and OOP",
-  "main": "src/index.js",
+  "description": "Multiplayer CLI General (Yahtzee) with an authoritative TCP server",
+  "main": "src/server/index.js",
   "type": "module",
   "scripts": {
-    "start": "node src/index.js",
+    "start": "node src/server/index.js",
+    "server": "node src/server/index.js",
+    "client": "node src/client/index.js",
     "test": "node --test src/tests/*.test.js"
   },
   "author": "Felipe Molz",

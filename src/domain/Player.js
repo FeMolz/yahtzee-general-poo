@@ -64,6 +64,7 @@ const CATEGORY_METHOD_MAP = {
  */
 export class Player {
   constructor(name) {
+    this.id = null;
     this.name = name;
     this.isActive = false;
     this.totalScore = 0;
@@ -103,6 +104,21 @@ export class Player {
   applyFirstRollBonus(baseScore) {
     const isFirstRoll = this.rollsRemaining === 2 && baseScore > 0;
     return isFirstRoll ? baseScore * 2 : baseScore;
+  }
+
+  /**
+   * Points this category would award for the given dice, including the
+   * first-roll bonus when it applies. Does not change the scorecard.
+   */
+  previewScore(categoryKey, dice) {
+    const methodName = CATEGORY_METHOD_MAP[categoryKey];
+    if (!methodName) {
+      return null;
+    }
+
+    const rules = new ScorecardCategories();
+    const baseScore = rules[methodName](dice);
+    return this.applyFirstRollBonus(baseScore);
   }
 
   /**

@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { ScorecardCategories } from "../models/ScorecardCategories.js";
+import { ScorecardCategories } from "../domain/ScorecardCategories.js";
 
 describe("ScorecardCategories", () => {
   const rules = new ScorecardCategories();

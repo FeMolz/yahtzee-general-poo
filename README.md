@@ -1,30 +1,32 @@
-# 🎲 General (Yahtzee) — CLI Dice Game
+# General (Yahtzee) — Multiplayer CLI
 
-A classic **General** dice game (also known as *Yahtzee*), played entirely in the terminal. Built with **Node.js ES Modules** and **Object-Oriented Programming (OOP)**.
+A classic **General** dice game played in the terminal, with a central authoritative server and one thin client per player. Built with **Node.js ES Modules**.
 
----
-
-## 🎯 About the Project
-
-This project was created as a **personal study challenge** to practice and consolidate core programming concepts:
-
-- **Object-Oriented Programming (OOP):** Class design and communication (`Player`, `GeneralGame`, `ScorecardCategories`), state encapsulation, and separation of concerns.
-- **Modern JavaScript:** ES Modules (`import`/`export`), `async`/`await`, and interactive CLI input with `node:readline/promises`.
-- **Logic & Data Structures:** Dice rolling/rerolling algorithms, scoring validation, and automatic combination detection.
-- **Testing:** Unit tests using the Node.js built-in test runner (`node:test`).
+The server rolls the dice, checks every move, scores the card, and advances the turn. Clients only draw the shared table and send a command when it is their turn.
 
 ---
 
-## 🕹️ How to Play
+## About the Project
 
-1. The game supports **2 to 4 players**.
-2. Each match lasts **12 rounds** (one for each scoring category).
-3. Each round, every player gets up to **3 dice rolls**:
-   - **1st Roll:** All 5 dice are rolled.
-   - **2nd & 3rd Rolls (optional):** Choose which dice to keep and re-roll the rest.
-   - **First-Roll Bonus:** If you score right after the 1st roll without re-rolling, the points for that category are **doubled**!
-4. **Combination Assistant:** The game automatically detects if your dice form special combinations (Three of a Kind, Four of a Kind, Full House, Straights, or General) that are still available on your scorecard.
-5. After 12 rounds, the player with the **highest total score** wins!
+- **Authoritative server:** dice, validation, scoring, turns, and the final ranking live in one process. A client cannot submit its own dice.
+- **Thin terminal client:** `console.clear()` redraws the lobby or the table from each `game:state`. The keyboard is read only after `turn:prompt` (or when the host starts the match).
+- **Newline-delimited JSON over `net`:** no extra network dependency. One JSON object per line.
+- **Same General rules:** 12 categories, up to 3 rolls, and a doubled score when you take a category on the first roll.
+
+---
+
+## How to Play
+
+1. Start the server, then start one client per player (2 to 4).
+2. Each player types a nickname and waits in the lobby. The first player is the host.
+3. The host types `start` once at least two players are in the room. The match does not start by itself, so a third or fourth player can still join.
+4. On your turn:
+   - `r` rolls all five dice.
+   - `t 3` locks or unlocks die number 3 (the `*` on the table marks a lock).
+   - `l` re-rolls every unlocked die.
+   - `s 7` scores category 7.
+5. Everyone else watches the same scoreboard, the same card, and the same dice. Keystrokes typed while waiting are discarded, so they do not leak into the next prompt.
+6. After 12 rounds the server sends the ranking and the winner. If someone disconnects, they leave the match immediately. Play continues while two or more players remain; otherwise everyone sees the partial scoreboard and there is no winner.
 
 ### Scoring Categories
 
@@ -45,82 +47,90 @@ This project was created as a **personal study challenge** to practice and conso
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) **v18 or higher** installed on your machine.
+- [Node.js](https://nodejs.org/) **v18 or higher**.
 
 ### Installation
 
 ```bash
-# Clone the repository
 git clone <repository-url>
 cd study-general-minigame
-
-# Install dependencies
 npm install
 ```
 
-### Running the Game
+### Running a Match
+
+In one terminal:
 
 ```bash
-npm start
+npm run server
 ```
 
-Or directly:
+The default port is **4000**. Override it with `PORT=4000` (PowerShell: `$env:PORT=4000`).
+
+In a terminal for each player:
 
 ```bash
-node src/index.js
+npm run client
 ```
 
-Then follow the on-screen prompts: enter player names, roll dice, choose which to keep, and pick a scoring category each turn!
+Or point a client at another machine:
+
+```bash
+node src/client/index.js 192.168.0.10 4000
+```
 
 ### Running Tests
-
-The project includes unit tests for all core modules using Node.js built-in test runner:
 
 ```bash
 npm test
 ```
 
-This runs all test files in `src/tests/` covering:
-- **ScorecardCategories** – All 12 scoring rules
-- **Player** – Scorecard management, rolls, bonuses
-- **GeneralGame** – Turn/round logic, winner determination
-- **Helpers** – Dice rolling, re-rolling, combination detection
-- **Validators** – Input validation for names, menus, dice selections
+The suite covers the scorecard, the turn state machine (locks, re-rolls, bonus, player removal), lobby rules, the NDJSON framer, and a real TCP exchange between two clients.
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```text
 src/
-├── cli/
-│   └── terminal.js              # CLI interface: player setup, turn flow, display
-├── models/
-│   ├── ScorecardCategories.js   # Scoring rules for all 12 categories
-│   ├── Player.js                # Player model (scorecard, rolls, bonus logic)
-│   └── GeneralGame.js           # Game state (rounds, turns, winner)
-├── tests/
-│   ├── scorecardCategories.test.js
-│   ├── player.test.js
-│   ├── generalGame.test.js
-│   ├── helpers.test.js
-│   └── validators.test.js
-├── utils/
-│   ├── helpers.js               # Dice rolling, re-rolling, combination detection
-│   └── validators.js            # Input validation functions
-└── index.js                     # Entry point — main game loop
+├── domain/
+│   ├── ScorecardCategories.js   # 12 scoring rules
+│   ├── Player.js                # Scorecard, rolls, first-roll bonus
+│   ├── GeneralGame.js           # Rounds, turns, locks, removal
+│   ├── dice.js                  # Server-side rolls (injectable RNG)
+│   └── combinations.js          # Special-combination hints
+├── shared/
+│   ├── protocol.js              # Message names and NDJSON codec
+│   ├── constants.js             # Room size, port, dice, rounds
+│   └── validators.js            # Nickname and menu checks
+├── server/
+│   ├── index.js                 # Listens on TCP
+│   ├── socket.js                # One socket, one line buffer
+│   └── match.js                 # Lobby, actions, snapshots
+├── client/
+│   ├── index.js                 # Connects, joins, input loop
+│   ├── renderer.js              # Terminal table from game:state
+│   └── input.js                 # Commands, stdin discarded off-turn
+└── tests/
 ```
+
+### Messages
+
+Client to server: `lobby:join`, `lobby:start`, `action:roll`, `action:toggle_lock`, `action:reroll`, `action:score`.
+
+Server to client: `lobby:welcome`, `game:state`, `turn:prompt`, `game:error`, `system:reject`.
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Runtime:** Node.js (v18+)
 - **Language:** JavaScript (ES Modules)
+- **Network:** `node:net` with newline-delimited JSON
 - **CLI Colors:** [chalk](https://www.npmjs.com/package/chalk) v6
 - **Testing:** Node.js built-in test runner (`node:test`)
 
